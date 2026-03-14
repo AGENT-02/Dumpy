@@ -36,7 +36,7 @@ struct ProtocolListView: View {
                         }
                     }
                     ForEach(filtered) { proto in
-                        NavigationLink(value: proto) {
+                        NavigationLink(value: AnalysisNavigationDestination.protocolDetail(proto)) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(proto.name)
                                     .font(.body.monospaced().bold())
@@ -80,7 +80,7 @@ struct ProtocolDetailView: View {
                 Section("Adopted Protocols") {
                     ForEach(proto.adoptedProtocols, id: \.self) { name in
                         if let targetProto = allProtocols.first(where: { $0.name == name }) {
-                            NavigationLink(value: targetProto) {
+                            NavigationLink(value: AnalysisNavigationDestination.protocolDetail(targetProto)) {
                                 Text(name).font(.body.monospaced())
                             }
                         } else {
@@ -92,7 +92,7 @@ struct ProtocolDetailView: View {
             if !conformingClasses.isEmpty {
                 Section("Conforming Classes (\(conformingClasses.count))") {
                     ForEach(conformingClasses) { cls in
-                        NavigationLink(value: cls) {
+                        NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(cls.name)
                                     .font(.body.monospaced())

@@ -50,6 +50,13 @@ typedef struct {
     const SectionInfo *objc_data;
     const SectionInfo *data;
     const SectionInfo *data_const;
+
+    /* Quick lookup pointers for Swift metadata sections */
+    const SectionInfo *swift5_types;
+    const SectionInfo *swift5_fieldmd;
+    const SectionInfo *swift5_reflstr;
+    const SectionInfo *swift5_proto;
+    const SectionInfo *swift5_protos;
 } SectionsInfo;
 
 /// Parse all segments and sections from the Mach-O binary.

@@ -164,6 +164,34 @@ struct SecurityInfo: Sendable {
     let cryptId: UInt32
 }
 
+enum SwiftTypeKind: String, Sendable {
+    case structType = "struct"
+    case classType = "class"
+    case enumType = "enum"
+}
+
+struct SwiftFieldModel: Identifiable, Sendable, Hashable {
+    let id = UUID()
+    let name: String
+    let typeName: String?
+    let isVar: Bool
+
+    static func == (lhs: SwiftFieldModel, rhs: SwiftFieldModel) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct SwiftTypeModel: Identifiable, Sendable, Hashable {
+    let id = UUID()
+    let name: String
+    let kind: SwiftTypeKind
+    let superclassName: String?
+    let fields: [SwiftFieldModel]
+    let conformances: [String]
+
+    static func == (lhs: SwiftTypeModel, rhs: SwiftTypeModel) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
 struct AnalysisResult: Sendable {
     let fileInfo: MachOFileInfo
     let header: MachOHeaderModel
@@ -172,7 +200,7 @@ struct AnalysisResult: Sendable {
     let classes: [ClassModel]
     let protocols: [ProtocolModel]
     let categories: [CategoryModel]
-    let selectors: [String]
+    let selectorCount: Int
     let dumpText: String
     let diagnostics: [DiagnosticEntry]
     let uuid: String?
@@ -196,10 +224,16 @@ struct AnalysisResult: Sendable {
     let objcABIVersion: UInt32
     let swiftABIVersion: UInt32
 
+    // Swift metadata
+    let swiftTypes: [SwiftTypeModel]
+    let swiftDumpText: String
+
     // Reverse indices
     let classHierarchy: [String: [String]]       // superclass name -> [subclass names]
     let protocolConformers: [String: [String]]    // protocol name -> [conforming class names]
     let classCategoryMap: [String: [String]]      // class name -> [category names]
+
+    var hasSwiftMetadata: Bool { !swiftTypes.isEmpty }
 
     /// Warning-level diagnostic messages surfaced from the C engine
     /// (e.g., DIAG_WARN_PARTIAL_METADATA for encrypted or incomplete metadata).

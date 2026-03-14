@@ -185,6 +185,12 @@ final class MachOAnalyzerBridge: Sendable {
                 throw Self.mapDiagCode(objcResult, diags: diags)
             }
 
+            // 6a. Parse Swift metadata
+            onProgress?("Extracting Swift metadata...")
+            var swiftMeta = SwiftMetadata()
+            swift_parse_metadata(&ctx, &sectionsInfo, &vmmap, &swiftMeta, diags)
+            defer { swift_metadata_destroy(&swiftMeta) }
+
             // 7. Generate dump text
             onProgress?("Generating class dump...")
             let archName = headerInfo.arch_name != nil ? String(cString: headerInfo.arch_name) : "unknown"
@@ -198,6 +204,50 @@ final class MachOAnalyzerBridge: Sendable {
                 dumpText = "Failed to generate dump text"
             }
 
+            // 7a. Generate Swift dump text
+            let swiftDumpCStr = format_swift_dump(&swiftMeta, fileName, archName)
+            let swiftDumpText: String
+            if let cStr = swiftDumpCStr {
+                swiftDumpText = String(cString: cStr)
+                free(cStr)
+            } else {
+                swiftDumpText = ""
+            }
+
+            let combinedDump = dumpText.isEmpty ? swiftDumpText :
+                (swiftDumpText.isEmpty ? dumpText : dumpText + "\n\n// MARK: - Swift Types\n\n" + swiftDumpText)
+
+            // 7b. Map Swift types to Swift models
+            var swiftTypes: [SwiftTypeModel] = []
+            for i in 0..<Int(swiftMeta.type_count) {
+                let t = swiftMeta.types[i]
+                let kind: SwiftTypeKind
+                switch t.kind {
+                case UInt32(SWIFT_KIND_CLASS): kind = .classType
+                case UInt32(SWIFT_KIND_STRUCT): kind = .structType
+                case UInt32(SWIFT_KIND_ENUM): kind = .enumType
+                default: kind = .structType
+                }
+                var fields: [SwiftFieldModel] = []
+                if let fieldPtr = t.fields {
+                    for j in 0..<Int(t.field_count) {
+                        let f = fieldPtr[j]
+                        fields.append(SwiftFieldModel(
+                            name: f.name != nil ? String(cString: f.name) : "<unknown>",
+                            typeName: f.mangled_type_name != nil ? String(cString: f.mangled_type_name) : nil,
+                            isVar: f.is_var
+                        ))
+                    }
+                }
+                swiftTypes.append(SwiftTypeModel(
+                    name: t.name != nil ? String(cString: t.name) : "<unknown>",
+                    kind: kind,
+                    superclassName: t.superclass_name != nil ? String(cString: t.superclass_name) : nil,
+                    fields: fields,
+                    conformances: t.conformances != nil ? Self.mapStringArray(t.conformances, count: Int(t.conformance_count)) : []
+                ))
+            }
+
             // 8. Map to Swift models
             onProgress?("Building analysis results...")
             return Self.mapToAnalysisResult(
@@ -208,7 +258,9 @@ final class MachOAnalyzerBridge: Sendable {
                 sectionsInfo: sectionsInfo,
                 objcMetadata: objcMetadata,
                 symTable: symTable,
-                dumpText: dumpText,
+                dumpText: combinedDump,
+                swiftTypes: swiftTypes,
+                swiftDumpText: swiftDumpText,
                 diags: diags,
                 archName: archName
             )
@@ -222,7 +274,10 @@ final class MachOAnalyzerBridge: Sendable {
         headerInfo: MachOHeaderInfo, lcInfo: LoadCommandsInfo,
         sectionsInfo: SectionsInfo, objcMetadata: ObjCMetadata,
         symTable: SymbolTable,
-        dumpText: String, diags: UnsafeMutablePointer<DiagList>?,
+        dumpText: String,
+        swiftTypes: [SwiftTypeModel],
+        swiftDumpText: String,
+        diags: UnsafeMutablePointer<DiagList>?,
         archName: String
     ) -> AnalysisResult {
         // Map header
@@ -289,11 +344,11 @@ final class MachOAnalyzerBridge: Sendable {
             categories.append(Self.mapCategory(objcMetadata.categories[i]))
         }
 
-        // Map selectors
-        var selectors: [String] = []
+        // Count selectors without materializing every string.
+        var selectorCount = 0
         for i in 0..<Int(objcMetadata.selector_count) {
-            if let sel = objcMetadata.selectors[i] {
-                selectors.append(String(cString: sel))
+            if objcMetadata.selectors[i] != nil {
+                selectorCount += 1
             }
         }
 
@@ -419,7 +474,7 @@ final class MachOAnalyzerBridge: Sendable {
             classes: classes.sorted { $0.name < $1.name },
             protocols: protocols.sorted { $0.name < $1.name },
             categories: categories.sorted { ($0.className ?? "") < ($1.className ?? "") },
-            selectors: selectors.sorted(),
+            selectorCount: selectorCount,
             dumpText: dumpText,
             diagnostics: diagnosticEntries,
             uuid: uuid,
@@ -436,6 +491,8 @@ final class MachOAnalyzerBridge: Sendable {
             platform: platformName,
             objcABIVersion: objcMetadata.has_image_info ? objcMetadata.objc_version : 0,
             swiftABIVersion: objcMetadata.has_image_info ? objcMetadata.swift_version : 0,
+            swiftTypes: swiftTypes,
+            swiftDumpText: swiftDumpText,
             classHierarchy: hierarchy,
             protocolConformers: conformers,
             classCategoryMap: catMap

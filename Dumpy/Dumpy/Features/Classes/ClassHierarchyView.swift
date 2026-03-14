@@ -42,7 +42,7 @@ struct ClassHierarchyView: View {
                         filterField
                     }
                     ForEach(filteredClasses) { cls in
-                        NavigationLink(value: cls) {
+                        NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                             ClassRow(cls: cls)
                         }
                     }
@@ -92,7 +92,7 @@ private struct HierarchyNode: View {
 
     var body: some View {
         if children.isEmpty {
-            NavigationLink(value: cls) {
+            NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                 nodeLabel
             }
         } else {
@@ -101,7 +101,7 @@ private struct HierarchyNode: View {
                     HierarchyNode(cls: child, childrenMap: childrenMap, depth: depth + 1)
                 }
             } label: {
-                NavigationLink(value: cls) {
+                NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                     nodeLabel
                 }
             }

@@ -24,6 +24,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6974A441AF44738364BB0B7B /* swift_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swift_types.h; sourceTree = "<group>"; };
+		2C5A89458A0DA3F82BFE4228 /* swift_parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swift_parser.h; sourceTree = "<group>"; };
+		E54BD561C4B9B8D79DFB00FA /* swift_formatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = swift_formatter.h; sourceTree = "<group>"; };
+		4D7B2D545437EF507846DB3C /* swift_parser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = swift_parser.c; sourceTree = "<group>"; };
+		8CB71466F3C1C382076201A4 /* swift_formatter.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = swift_formatter.c; sourceTree = "<group>"; };
+		A959A1F69EBFDDDF08FC87CE /* SwiftTypeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTypeListView.swift; sourceTree = "<group>"; };
+		DB57165DA9E5B91F0AF2237D /* SwiftTypeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTypeDetailView.swift; sourceTree = "<group>"; };
+
 		E18D16D32F64071D00577D4D /* Dumpy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dumpy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E18D16E02F64071E00577D4D /* DumpyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DumpyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E18D16EA2F64071E00577D4D /* DumpyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DumpyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,6 +93,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4A288E1F4C825CFA1542EBF8 /* SwiftTypes */ = {
+			isa = PBXGroup;
+			children = (
+				A959A1F69EBFDDDF08FC87CE /* SwiftTypeListView.swift */,
+				DB57165DA9E5B91F0AF2237D /* SwiftTypeDetailView.swift */,
+			);
+			path = SwiftTypes;
+			sourceTree = "<group>";
+		};
+
 		E18D16CA2F64071D00577D4D = {
 			isa = PBXGroup;
 			children = (

@@ -32,7 +32,7 @@ struct ClassDetailView: View {
                 InfoRow(label: "Name", value: cls.name)
                 if let superclass = cls.superclassName {
                     if let superclassCls = allClasses.first(where: { $0.name == superclass }) {
-                        NavigationLink(value: superclassCls) {
+                        NavigationLink(value: AnalysisNavigationDestination.classDetail(superclassCls)) {
                             InfoRow(label: "Superclass", value: superclass)
                         }
                         .contextMenu {
@@ -72,7 +72,7 @@ struct ClassDetailView: View {
                                     .foregroundColor(.secondary)
                             }
                             if let resolved = entry.resolved {
-                                NavigationLink(value: resolved) {
+                                NavigationLink(value: AnalysisNavigationDestination.classDetail(resolved)) {
                                     Text(entry.name)
                                         .font(.body.monospaced())
                                 }

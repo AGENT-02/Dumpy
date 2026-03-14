@@ -49,6 +49,16 @@ static void update_quick_lookup(SectionsInfo *info, const SectionInfo *sec) {
             info->objc_methtype = sec;
         else if (strcmp(sect, "__cstring") == 0 && !info->cstring)
             info->cstring = sec;
+        else if (strcmp(sect, "__swift5_types") == 0 && !info->swift5_types)
+            info->swift5_types = sec;
+        else if (strcmp(sect, "__swift5_fieldmd") == 0 && !info->swift5_fieldmd)
+            info->swift5_fieldmd = sec;
+        else if (strcmp(sect, "__swift5_reflstr") == 0 && !info->swift5_reflstr)
+            info->swift5_reflstr = sec;
+        else if (strcmp(sect, "__swift5_proto") == 0 && !info->swift5_proto)
+            info->swift5_proto = sec;
+        else if (strcmp(sect, "__swift5_protos") == 0 && !info->swift5_protos)
+            info->swift5_protos = sec;
     }
 
     if (is_data && strcmp(sect, "__data") == 0 && !info->data)

@@ -35,7 +35,7 @@ struct ClassListView: View {
                         }
                     }
                     ForEach(filteredClasses) { cls in
-                        NavigationLink(value: cls) {
+                        NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                             ClassRow(cls: cls)
                         }
                     }

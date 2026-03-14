@@ -26,6 +26,8 @@ final class AnalysisService: ObservableObject {
     func cancel() {
         analysisTask?.cancel()
         analysisTask = nil
+        fileData = nil
+        fatResult = nil
         phase = .idle
         progress = ""
     }
@@ -34,14 +36,13 @@ final class AnalysisService: ObservableObject {
         phase = .reading
         progress = "Reading file..."
 
-        analysisTask = Task(priority: .userInitiated) { [weak self] in
+        analysisTask = Task(priority: .userInitiated) { [self] in
             do {
                 let data = try await Task.detached(priority: .userInitiated) {
                     try FileImportService.readFileData(from: url)
                 }.value
                 let fileName = url.lastPathComponent
 
-                guard let self else { return }
                 self.fileData = data
                 self.progress = "Parsing FAT header..."
                 self.phase = .parsingFatHeader
@@ -61,17 +62,25 @@ final class AnalysisService: ObservableObject {
                 self.fileInfo = fileInfo
 
                 if fatResult.architectures.count > 1 {
+                    self.analysisTask = nil
                     self.phase = .selectingArchitecture
                 } else {
+                    self.analysisTask = nil
                     self.beginAnalysis(archIndex: 0)
                 }
             } catch let error as AnalysisError {
-                guard let self else { return }
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
                 self.phase = .failed(error)
             } catch is CancellationError {
-                // Task was cancelled; no state update needed
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
             } catch {
-                guard let self else { return }
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
                 self.phase = .failed(.fileImportFailed(error.localizedDescription))
             }
         }
@@ -107,7 +116,7 @@ final class AnalysisService: ObservableObject {
         let arch = fatResult.architectures[archIndex]
         let fileName = fileInfo.fileName
 
-        analysisTask = Task(priority: .userInitiated) { [weak self] in
+        analysisTask = Task(priority: .userInitiated) { [self] in
             do {
                 let result = try await withThrowingTaskGroup(of: AnalysisResult.self) { group in
                     group.addTask {
@@ -118,7 +127,7 @@ final class AnalysisService: ObservableObject {
                                 archSize: arch.size,
                                 fileName: fileName,
                                 onProgress: { message in
-                                    Task { @MainActor [weak self] in
+                                    DispatchQueue.main.async { [weak self] in
                                         self?.progress = message
                                     }
                                 }
@@ -135,18 +144,25 @@ final class AnalysisService: ObservableObject {
                     group.cancelAll()
                     return first
                 }
-                guard let self else { return }
                 self.result = result
-                self.fileData = nil  // Release binary data after successful analysis
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
                 self.phase = .complete
                 self.progress = "Analysis complete"
             } catch let error as AnalysisError {
-                guard let self else { return }
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
                 self.phase = .failed(error)
             } catch is CancellationError {
-                // Task was cancelled; no state update needed
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
             } catch {
-                guard let self else { return }
+                self.analysisTask = nil
+                self.fileData = nil
+                self.fatResult = nil
                 self.phase = .failed(.analysisFailedGeneric(error.localizedDescription))
             }
         }

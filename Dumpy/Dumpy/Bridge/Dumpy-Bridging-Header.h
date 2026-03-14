@@ -15,5 +15,8 @@
 #include "../CEngine/include/objc_resolver.h"
 #include "../CEngine/include/objc_formatter.h"
 #include "../CEngine/include/macho_symbols.h"
+#include "../CEngine/include/swift_types.h"
+#include "../CEngine/include/swift_parser.h"
+#include "../CEngine/include/swift_formatter.h"
 
 #endif

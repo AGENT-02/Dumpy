@@ -40,7 +40,7 @@ struct CategoryListView: View {
                         }
                     }
                     ForEach(filtered) { cat in
-                        NavigationLink(value: cat) {
+                        NavigationLink(value: AnalysisNavigationDestination.categoryDetail(cat)) {
                             VStack(alignment: .leading, spacing: 4) {
                                 if let className = cat.className {
                                     Text("\(className) (\(cat.name))")
@@ -82,7 +82,7 @@ struct CategoryDetailView: View {
                 InfoRow(label: "Name", value: category.name)
                 if let cls = category.className {
                     if let targetClass = allClasses.first(where: { $0.name == cls }) {
-                        NavigationLink(value: targetClass) {
+                        NavigationLink(value: AnalysisNavigationDestination.classDetail(targetClass)) {
                             InfoRow(label: "Class", value: cls)
                         }
                     } else {
@@ -108,7 +108,7 @@ struct CategoryDetailView: View {
             if !relatedCategories.isEmpty {
                 Section("Other Categories for \(category.className ?? "this class")") {
                     ForEach(relatedCategories) { cat in
-                        NavigationLink(value: cat) {
+                        NavigationLink(value: AnalysisNavigationDestination.categoryDetail(cat)) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(cat.name)
                                     .font(.body.monospaced())

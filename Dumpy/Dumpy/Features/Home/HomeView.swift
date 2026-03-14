@@ -99,6 +99,26 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showAnalysis) {
                 AnalysisContainerView(service: analysisService)
             }
+            .navigationDestination(for: AnalysisNavigationDestination.self) { destination in
+                switch destination {
+                case .classDetail(let cls):
+                    ClassDetailView(cls: cls, allClasses: analysisService.result?.classes ?? [])
+                case .protocolDetail(let proto):
+                    ProtocolDetailView(
+                        proto: proto,
+                        allProtocols: analysisService.result?.protocols ?? [],
+                        allClasses: analysisService.result?.classes ?? []
+                    )
+                case .categoryDetail(let category):
+                    CategoryDetailView(
+                        category: category,
+                        allClasses: analysisService.result?.classes ?? [],
+                        allCategories: analysisService.result?.categories ?? []
+                    )
+                case .swiftTypeDetail(let type):
+                    SwiftTypeDetailView(type: type)
+                }
+            }
             .alert("Clear All Recent Files?", isPresented: $showClearAllConfirmation) {
                 Button("Clear All", role: .destructive) {
                     recentFilesStore.clearAll()

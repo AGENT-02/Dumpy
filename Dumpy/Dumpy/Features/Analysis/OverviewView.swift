@@ -84,7 +84,7 @@ struct OverviewView: View {
                     .accessibilityHint("Double-tap to view details")
                 SummaryRow(icon: "tag", label: "Categories", count: result.categories.count)
                     .accessibilityHint("Double-tap to view details")
-                SummaryRow(icon: "function", label: "Selectors", count: result.selectors.count)
+                SummaryRow(icon: "function", label: "Selectors", count: result.selectorCount)
                 SummaryRow(icon: "textformat.abc", label: "Symbols", count: result.symbols.count)
             }
 

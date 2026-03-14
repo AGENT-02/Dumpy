@@ -57,22 +57,40 @@ enum SearchService {
 
         var methods: [SearchMethodResult] = []
         for cls in result.classes {
-            for m in cls.instanceMethods + cls.classMethods {
-                if matches(m.name) {
-                    methods.append(SearchMethodResult(method: m, ownerName: cls.name, ownerType: "class"))
-                    if methods.count >= resultLimit { break }
-                }
-            }
+            appendMatchingMethods(
+                from: cls.instanceMethods,
+                ownerName: cls.name,
+                ownerType: "class",
+                matching: matches,
+                into: &methods
+            )
+            if methods.count >= resultLimit { break }
+            appendMatchingMethods(
+                from: cls.classMethods,
+                ownerName: cls.name,
+                ownerType: "class",
+                matching: matches,
+                into: &methods
+            )
             if methods.count >= resultLimit { break }
         }
         if methods.count < resultLimit {
             for proto in result.protocols {
-                for m in proto.instanceMethods + proto.classMethods {
-                    if matches(m.name) {
-                        methods.append(SearchMethodResult(method: m, ownerName: proto.name, ownerType: "protocol"))
-                        if methods.count >= resultLimit { break }
-                    }
-                }
+                appendMatchingMethods(
+                    from: proto.instanceMethods,
+                    ownerName: proto.name,
+                    ownerType: "protocol",
+                    matching: matches,
+                    into: &methods
+                )
+                if methods.count >= resultLimit { break }
+                appendMatchingMethods(
+                    from: proto.classMethods,
+                    ownerName: proto.name,
+                    ownerType: "protocol",
+                    matching: matches,
+                    into: &methods
+                )
                 if methods.count >= resultLimit { break }
             }
         }
@@ -89,5 +107,20 @@ enum SearchService {
         }
 
         return SearchResults(classes: classes, protocols: protocols, categories: categories, methods: methods, properties: properties)
+    }
+
+    private nonisolated static func appendMatchingMethods(
+        from methodsToSearch: [MethodModel],
+        ownerName: String,
+        ownerType: String,
+        matching matches: (String) -> Bool,
+        into results: inout [SearchMethodResult]
+    ) {
+        for method in methodsToSearch {
+            if matches(method.name) {
+                results.append(SearchMethodResult(method: method, ownerName: ownerName, ownerType: ownerType))
+                if results.count >= resultLimit { return }
+            }
+        }
     }
 }

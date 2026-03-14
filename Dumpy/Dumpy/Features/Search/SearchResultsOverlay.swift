@@ -27,7 +27,7 @@ struct SearchResultsOverlay: View {
                 if !searchResults.classes.isEmpty {
                     Section("Classes (\(searchResults.classes.count))") {
                         ForEach(searchResults.classes.prefix(maxResultsPerSection)) { cls in
-                            NavigationLink(value: cls) {
+                            NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                                 highlightedText(cls.name, query: query)
                                     .font(.body.monospaced())
                             }
@@ -38,7 +38,7 @@ struct SearchResultsOverlay: View {
                 if !searchResults.protocols.isEmpty {
                     Section("Protocols (\(searchResults.protocols.count))") {
                         ForEach(searchResults.protocols.prefix(maxResultsPerSection)) { proto in
-                            NavigationLink(value: proto) {
+                            NavigationLink(value: AnalysisNavigationDestination.protocolDetail(proto)) {
                                 highlightedText(proto.name, query: query)
                                     .font(.body.monospaced())
                             }
@@ -49,7 +49,7 @@ struct SearchResultsOverlay: View {
                 if !searchResults.categories.isEmpty {
                     Section("Categories (\(searchResults.categories.count))") {
                         ForEach(searchResults.categories.prefix(maxResultsPerSection)) { cat in
-                            NavigationLink(value: cat) {
+                            NavigationLink(value: AnalysisNavigationDestination.categoryDetail(cat)) {
                                 highlightedText("\(cat.className ?? "?") (\(cat.name))", query: query)
                                     .font(.body.monospaced())
                             }
@@ -83,11 +83,11 @@ struct SearchResultsOverlay: View {
     @ViewBuilder
     private func methodNavigationLink(for r: SearchService.SearchMethodResult) -> some View {
         if r.ownerType == "class", let cls = result.classes.first(where: { $0.name == r.ownerName }) {
-            NavigationLink(value: cls) {
+            NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                 methodResultContent(r)
             }
         } else if r.ownerType == "protocol", let proto = result.protocols.first(where: { $0.name == r.ownerName }) {
-            NavigationLink(value: proto) {
+            NavigationLink(value: AnalysisNavigationDestination.protocolDetail(proto)) {
                 methodResultContent(r)
             }
         } else {
@@ -98,7 +98,7 @@ struct SearchResultsOverlay: View {
     @ViewBuilder
     private func propertyNavigationLink(for r: SearchService.SearchPropertyResult) -> some View {
         if let cls = result.classes.first(where: { $0.name == r.ownerName }) {
-            NavigationLink(value: cls) {
+            NavigationLink(value: AnalysisNavigationDestination.classDetail(cls)) {
                 propertyResultContent(r)
             }
         } else {

@@ -2,10 +2,7 @@ import SwiftUI
 
 struct AnalysisTabView: View {
     let result: AnalysisResult
-    @AppStorage("selectedAnalysisTab") private var selectedTabRaw: String = AnalysisTab.overview.rawValue
-    private var selectedTab: AnalysisTab {
-        get { AnalysisTab(rawValue: selectedTabRaw) ?? .overview }
-    }
+    @State private var selectedTab: AnalysisTab = .overview
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var debounceTask: Task<Void, Never>?
@@ -21,6 +18,7 @@ struct AnalysisTabView: View {
         case dump = "Dump"
         case segments = "Segments"
         case symbols = "Symbols"
+        case swiftTypes = "Swift"
 
         var id: String { rawValue }
 
@@ -34,6 +32,7 @@ struct AnalysisTabView: View {
             case .dump: return "doc.text"
             case .segments: return "rectangle.split.3x3"
             case .symbols: return "textformat.abc"
+            case .swiftTypes: return "swift"
             }
         }
     }
@@ -44,7 +43,7 @@ struct AnalysisTabView: View {
                 HStack(spacing: 4) {
                     ForEach(AnalysisTab.allCases) { tab in
                         TabButton(tab: tab, isSelected: selectedTab == tab, count: countForTab(tab)) {
-                            selectedTabRaw = tab.rawValue
+                            selectedTab = tab
                         }
                     }
                 }
@@ -73,6 +72,8 @@ struct AnalysisTabView: View {
                     SegmentsView(segments: result.segments, loadCommands: result.loadCommands)
                 case .symbols:
                     SymbolsView(symbols: result.symbols)
+                case .swiftTypes:
+                    SwiftTypeListView(types: result.swiftTypes)
                 }
             }
         }
@@ -114,6 +115,7 @@ struct AnalysisTabView: View {
         case .protocols: return result.protocols.count
         case .categories: return result.categories.count
         case .symbols: return result.symbols.count
+        case .swiftTypes: return result.swiftTypes.count
         default: return nil
         }
     }

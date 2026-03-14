@@ -1,5 +1,12 @@
 import SwiftUI
 
+enum AnalysisNavigationDestination: Hashable {
+    case classDetail(ClassModel)
+    case protocolDetail(ProtocolModel)
+    case categoryDetail(CategoryModel)
+    case swiftTypeDetail(SwiftTypeModel)
+}
+
 struct AnalysisContainerView: View {
     @ObservedObject var service: AnalysisService
 
@@ -13,7 +20,7 @@ struct AnalysisContainerView: View {
             case .complete:
                 if let result = service.result {
                     AnalysisTabView(result: result)
-                        .id("analysis-tabs")
+                        .id("\(result.fileInfo.fileName)-\(result.selectedArchitecture)-\(result.fileInfo.fileSize)")
                 }
             case .failed(let error):
                 ErrorContentView(error: error) {
@@ -23,15 +30,6 @@ struct AnalysisContainerView: View {
         }
         .navigationTitle(service.fileInfo?.fileName ?? "Analysis")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: ClassModel.self) { cls in
-            ClassDetailView(cls: cls, allClasses: service.result?.classes ?? [])
-        }
-        .navigationDestination(for: ProtocolModel.self) { proto in
-            ProtocolDetailView(proto: proto, allProtocols: service.result?.protocols ?? [], allClasses: service.result?.classes ?? [])
-        }
-        .navigationDestination(for: CategoryModel.self) { cat in
-            CategoryDetailView(category: cat, allClasses: service.result?.classes ?? [], allCategories: service.result?.categories ?? [])
-        }
     }
 }
 

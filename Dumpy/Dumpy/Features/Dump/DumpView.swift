@@ -30,9 +30,8 @@ struct DumpView: View {
     let fileName: String
     @State private var showCopied = false
     @State private var searchText = ""
-    @State private var debouncedSearch = ""
     @State private var debounceTask: Task<Void, Never>?
-    @State private var cachedLines: [String] = []
+    @State private var cachedLines: [Substring] = []
     @State private var highlightedIndices: Set<Int> = []
     @State private var matchCount: Int = 0
     @AppStorage("dumpFontSize") private var fontSizeRaw: String = DumpFontSize.medium.rawValue
@@ -65,7 +64,7 @@ struct DumpView: View {
                     }
                     .onAppear {
                         if cachedLines.isEmpty {
-                            cachedLines = dumpText.components(separatedBy: "\n")
+                            cachedLines = dumpText.split(separator: "\n", omittingEmptySubsequences: false)
                         }
                         DispatchQueue.main.async {
                             proxy.scrollTo("dumpTop", anchor: .top)
@@ -176,10 +175,9 @@ struct DumpView: View {
     }
 
     private func performSearch(query: String) {
-        let lower = query.lowercased()
         var indices = Set<Int>()
         for (index, line) in cachedLines.enumerated() {
-            if line.lowercased().contains(lower) {
+            if line.range(of: query, options: .caseInsensitive) != nil {
                 indices.insert(index)
             }
         }
@@ -192,7 +190,7 @@ struct DumpView: View {
 
 struct DumpLineView: View {
     let lineNumber: Int
-    let text: String
+    let text: Substring
     let isHighlighted: Bool
     var fontSize: DumpFontSize = .medium
 
@@ -217,8 +215,9 @@ struct DumpLineView: View {
     }
 
     private var highlightedText: AttributedString {
-        var attr = AttributedString(text)
-        let str = text.trimmingCharacters(in: .whitespaces)
+        let line = String(text)
+        var attr = AttributedString(line)
+        let str = line.trimmingCharacters(in: .whitespaces)
 
         // Keywords in blue
         let keywords = [
