@@ -107,6 +107,10 @@ struct AnalysisTabView: View {
                 SearchResultsOverlay(query: debouncedSearchText, result: result)
             }
         }
+        .onDisappear {
+            debounceTask?.cancel()
+            debounceTask = nil
+        }
     }
 
     private func countForTab(_ tab: AnalysisTab) -> Int? {

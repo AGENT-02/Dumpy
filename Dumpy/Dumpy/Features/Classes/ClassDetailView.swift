@@ -6,32 +6,32 @@ struct ClassDetailView: View {
     var allClasses: [ClassModel] = []
     @State private var showCopied = false
 
+    private var classMap: [String: ClassModel] {
+        Dictionary(allClasses.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     /// Builds the full superclass chain starting from this class's superclass.
-    /// Each entry is (name, resolvedClass?) — resolvedClass is non-nil when
-    /// the class exists in the binary.
     private var superclassChain: [(name: String, resolved: ClassModel?)] {
+        let map = classMap
         var chain: [(String, ClassModel?)] = []
         var visited = Set<String>()
         var currentName = cls.superclassName
         while let name = currentName, !name.isEmpty, !visited.contains(name) {
             visited.insert(name)
-            if let found = allClasses.first(where: { $0.name == name }) {
-                chain.append((name, found))
-                currentName = found.superclassName
-            } else {
-                chain.append((name, nil))
-                break
-            }
+            let found = map[name]
+            chain.append((name, found))
+            currentName = found?.superclassName
         }
         return chain
     }
 
     var body: some View {
+        let map = classMap
         List {
             Section("Class Info") {
                 InfoRow(label: "Name", value: cls.name)
                 if let superclass = cls.superclassName {
-                    if let superclassCls = allClasses.first(where: { $0.name == superclass }) {
+                    if let superclassCls = map[superclass] {
                         NavigationLink(value: AnalysisNavigationDestination.classDetail(superclassCls)) {
                             InfoRow(label: "Superclass", value: superclass)
                         }

@@ -81,9 +81,10 @@ typedef struct {
        0 = unknown, 1 = signed, 2 = ad-hoc signed */
     int signing_status;
 
-    /* Build tools from LC_BUILD_VERSION (max 8) */
-    char *build_tool_names[8];     /* heap-allocated, e.g. "clang" */
-    char *build_tool_versions[8];  /* heap-allocated, e.g. "15.0.0" */
+#define MAX_BUILD_TOOLS 8
+    /* Build tools from LC_BUILD_VERSION */
+    char *build_tool_names[MAX_BUILD_TOOLS];     /* heap-allocated, e.g. "clang" */
+    char *build_tool_versions[MAX_BUILD_TOOLS];  /* heap-allocated, e.g. "15.0.0" */
     size_t build_tool_count;
 } LoadCommandsInfo;
 

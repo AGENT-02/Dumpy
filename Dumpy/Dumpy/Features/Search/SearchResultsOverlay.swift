@@ -6,11 +6,10 @@ struct SearchResultsOverlay: View {
 
     private let maxResultsPerSection = 50
 
-    private var searchResults: SearchService.SearchResults {
-        SearchService.search(query: query, in: result)
-    }
+    @State private var searchResults: SearchService.SearchResults = .empty
 
     var body: some View {
+        Group {
         if searchResults.isEmpty {
             VStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
@@ -76,6 +75,9 @@ struct SearchResultsOverlay: View {
             }
             .background(Color(.systemBackground))
         }
+        }
+        .onAppear { performSearch() }
+        .onChange(of: query) { _ in performSearch() }
     }
 
     // MARK: - Method Navigation
@@ -170,5 +172,9 @@ struct SearchResultsOverlay: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
+    }
+
+    private func performSearch() {
+        searchResults = SearchService.search(query: query, in: result)
     }
 }

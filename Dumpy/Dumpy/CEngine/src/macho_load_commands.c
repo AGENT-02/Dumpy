@@ -224,11 +224,11 @@ DiagCode macho_parse_load_commands(const MachOContext *ctx,
 
                         /* Parse build tool versions */
                         size_t tools_offset = offset + sizeof(MachOBuildVersionCommand);
-                        if (ntools > 8) ntools = 8; /* cap to fixed array size */
+                        if (ntools > MAX_BUILD_TOOLS) ntools = MAX_BUILD_TOOLS;
                         for (uint32_t t = 0; t < ntools; t++) {
                             MachOBuildToolVersion btv;
                             size_t btv_off = tools_offset + (size_t)t * sizeof(MachOBuildToolVersion);
-                            if (btv_off + sizeof(MachOBuildToolVersion) > offset + cmdsize) break;
+                            if (!safe_check_range(ctx->size, btv_off, sizeof(MachOBuildToolVersion))) break;
                             if (!safe_read_bytes(ctx->data, ctx->size, btv_off, &btv, sizeof(btv))) break;
                             uint32_t tool = macho_swap32(ctx, btv.tool);
                             uint32_t ver  = macho_swap32(ctx, btv.version);
@@ -240,9 +240,16 @@ DiagCode macho_parse_load_commands(const MachOContext *ctx,
                                 case 4:  tool_name = "lld";   break;
                                 default: tool_name = "unknown"; break;
                             }
-                            info->build_tool_names[info->build_tool_count] = strdup(tool_name);
-                            info->build_tool_versions[info->build_tool_count] = format_version(ver);
-                            info->build_tool_count++;
+                            char *tn = strdup(tool_name);
+                            char *tv = format_version(ver);
+                            if (tn && tv) {
+                                info->build_tool_names[info->build_tool_count] = tn;
+                                info->build_tool_versions[info->build_tool_count] = tv;
+                                info->build_tool_count++;
+                            } else {
+                                free(tn);
+                                free(tv);
+                            }
                         }
                     }
                 }

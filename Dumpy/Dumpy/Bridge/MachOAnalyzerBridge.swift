@@ -488,8 +488,9 @@ final class MachOAnalyzerBridge: Sendable {
         // Map symbols
         var symbols: [SymbolModel] = []
         if let syms = symTable.symbols, symTable.count > 0 {
-            symbols.reserveCapacity(min(Int(symTable.count), 50000))
-            for i in 0..<Int(symTable.count) {
+            let symCount = min(Int(symTable.count), 50000)
+            symbols.reserveCapacity(symCount)
+            for i in 0..<symCount {
                 let sym = syms[i]
                 let name = sym.name != nil ? String(cString: sym.name) : "<unknown>"
                 let typeName = String(cString: symbol_type_name(sym.type))
@@ -514,13 +515,15 @@ final class MachOAnalyzerBridge: Sendable {
         }
 
         // Map build tools from LC_BUILD_VERSION
+        let maxBuildTools = 8
         var buildTools: [BuildToolModel] = []
-        for i in 0..<Int(lcInfo.build_tool_count) {
+        let toolCount = min(Int(lcInfo.build_tool_count), maxBuildTools)
+        for i in 0..<toolCount {
             let namePtr = withUnsafePointer(to: lcInfo.build_tool_names) {
-                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: 8) { $0[i] }
+                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: maxBuildTools) { $0[i] }
             }
             let verPtr = withUnsafePointer(to: lcInfo.build_tool_versions) {
-                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: 8) { $0[i] }
+                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: maxBuildTools) { $0[i] }
             }
             if let namePtr = namePtr, let verPtr = verPtr {
                 buildTools.append(BuildToolModel(

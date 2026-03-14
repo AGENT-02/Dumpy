@@ -3,6 +3,8 @@ import SwiftUI
 struct SymbolsView: View {
     let symbols: [SymbolModel]
     @State private var searchText = ""
+    @State private var debouncedSearch = ""
+    @State private var debounceTask: Task<Void, Never>?
     @State private var selectedGroup: SymbolGroup = .all
 
     enum SymbolGroup: String, CaseIterable, Identifiable {
@@ -26,11 +28,11 @@ struct SymbolsView: View {
         case .undefined:
             result = result.filter { $0.typeDescription == "undefined" }
         }
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
+        if !debouncedSearch.isEmpty {
+            let query = debouncedSearch.lowercased()
             result = result.filter {
-                $0.name.lowercased().contains(query) ||
-                ($0.demangledName?.lowercased().contains(query) ?? false)
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                ($0.demangledName?.localizedCaseInsensitiveContains(query) ?? false)
             }
         }
         return result
@@ -56,6 +58,14 @@ struct SymbolsView: View {
                     .textFieldStyle(.plain)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+                    .onChange(of: searchText) { newValue in
+                        debounceTask?.cancel()
+                        debounceTask = Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            guard !Task.isCancelled else { return }
+                            debouncedSearch = newValue
+                        }
+                    }
                 if !searchText.isEmpty {
                     Button {
                         searchText = ""

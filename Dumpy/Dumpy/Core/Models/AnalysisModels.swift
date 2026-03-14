@@ -86,15 +86,18 @@ struct MethodModel: Identifiable, Sendable, Hashable {
     static func == (lhs: MethodModel, rhs: MethodModel) -> Bool { lhs.id == rhs.id }
 }
 
-struct IvarModel: Identifiable, Sendable {
+struct IvarModel: Identifiable, Sendable, Hashable {
     let id = UUID()
     let name: String
     let type: String?
     let offset: UInt32
     let size: UInt32
+
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: IvarModel, rhs: IvarModel) -> Bool { lhs.id == rhs.id }
 }
 
-struct PropertyModel: Identifiable, Sendable {
+struct PropertyModel: Identifiable, Sendable, Hashable {
     let id = UUID()
     let name: String
     let attributes: String?
@@ -104,6 +107,9 @@ struct PropertyModel: Identifiable, Sendable {
     let isWeak: Bool
     let isCopy: Bool
     let isRetain: Bool
+
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: PropertyModel, rhs: PropertyModel) -> Bool { lhs.id == rhs.id }
 }
 
 struct ProtocolModel: Identifiable, Sendable, Hashable {
