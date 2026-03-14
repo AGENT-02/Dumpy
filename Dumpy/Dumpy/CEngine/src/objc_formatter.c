@@ -283,6 +283,122 @@ fallback:
 }
 
 /* ================================================================ */
+/* Variadic method detection                                        */
+/* ================================================================ */
+
+/*
+ * Count the number of explicit parameter types encoded in the method's
+ * type string (i.e. everything after the return type, self, and _cmd).
+ */
+static size_t count_encoded_params(const char *types)
+{
+    if (!types || !*types) return 0;
+
+    const char *tc = types;
+
+    /* Skip return type */
+    tc = skip_one_type(tc);
+    /* Skip self and _cmd */
+    if (*tc) tc = skip_one_type(tc);
+    if (*tc) tc = skip_one_type(tc);
+
+    size_t count = 0;
+    while (*tc) {
+        tc = skip_one_type(tc);
+        count++;
+    }
+    return count;
+}
+
+/*
+ * Well-known variadic selector suffixes. If a selector ends with one
+ * of these fragments (right before the trailing colon) and has an `id`
+ * last parameter, it is almost certainly variadic.
+ */
+static const char *variadic_suffixes[] = {
+    "WithFormat:",
+    "WithObjects:",
+    "WithObjectsAndKeys:",
+    "WithItems:",
+    "WithArguments:",
+    "stringsByAppendingPaths:",
+    NULL
+};
+
+/*
+ * Well-known variadic selectors (exact match).
+ */
+static const char *variadic_selectors[] = {
+    "initWithFormat:",
+    "initWithFormat:locale:",
+    "localizedStringWithFormat:",
+    "stringWithFormat:",
+    "initWithFormat:arguments:",
+    "arrayWithObjects:",
+    "initWithObjects:",
+    "setWithObjects:",
+    "initWithObjectsAndKeys:",
+    "dictionaryWithObjectsAndKeys:",
+    "predicateWithFormat:",
+    "predicateWithFormat:arguments:",
+    "predicateWithFormat:argumentArray:",
+    "initWithCondition:predicateWithFormat:",
+    "alertWithMessageText:defaultButton:alternateButton:otherButton:informativeTextWithFormat:",
+    "appendFormat:",
+    "stringByAppendingFormat:",
+    NULL
+};
+
+/*
+ * Determine whether a method should be formatted as variadic.
+ *
+ * Strategy (in priority order):
+ *  1. If the type encoding has fewer explicit parameter types than
+ *     the selector has colons, it is variadic (the runtime simply
+ *     omits trailing untyped args).
+ *  2. If the selector exactly matches a known variadic selector,
+ *     treat it as variadic.
+ *  3. If the selector ends with a known variadic suffix, treat it
+ *     as variadic.
+ */
+static bool is_variadic_method(const char *selector, const char *types)
+{
+    if (!selector) return false;
+
+    /* Count colons in selector */
+    size_t colon_count = 0;
+    for (const char *c = selector; *c; c++) {
+        if (*c == ':') colon_count++;
+    }
+    if (colon_count == 0) return false;
+
+    /* Strategy 1: type encoding has fewer params than selector colons */
+    if (types && *types) {
+        size_t encoded = count_encoded_params(types);
+        if (encoded < colon_count) {
+            return true;
+        }
+    }
+
+    /* Strategy 2: exact match against known variadic selectors */
+    for (const char **s = variadic_selectors; *s; s++) {
+        if (strcmp(selector, *s) == 0) return true;
+    }
+
+    /* Strategy 3: suffix match */
+    size_t sel_len = strlen(selector);
+    for (const char **s = variadic_suffixes; *s; s++) {
+        size_t suf_len = strlen(*s);
+        if (sel_len >= suf_len &&
+            strcmp(selector + sel_len - suf_len, *s) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* ================================================================ */
 /* format_method                                                    */
 /* ================================================================ */
 
@@ -315,6 +431,9 @@ void format_method(FormatBuffer *buf, const ObjCMethod *method, bool is_class_me
     for (const char *c = method->name; *c; c++) {
         if (*c == ':') colon_count++;
     }
+
+    /* Detect variadic methods */
+    bool variadic = is_variadic_method(method->name, method->types);
 
     if (colon_count == 0) {
         /* No parameters */
@@ -356,6 +475,11 @@ void format_method(FormatBuffer *buf, const ObjCMethod *method, bool is_class_me
             free(param_type);
             arg_idx++;
             part = strtok_r(NULL, ":", &saveptr);
+        }
+
+        /* Append variadic indicator after the last parameter */
+        if (variadic) {
+            format_append(buf, ", ...");
         }
 
         format_append(buf, ";\n");

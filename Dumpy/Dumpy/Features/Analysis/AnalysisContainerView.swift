@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum AnalysisNavigationDestination: Hashable {
+    case analysis
     case classDetail(ClassModel)
     case protocolDetail(ProtocolModel)
     case categoryDetail(CategoryModel)

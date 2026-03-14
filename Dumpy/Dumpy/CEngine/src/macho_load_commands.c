@@ -350,6 +350,24 @@ DiagCode macho_parse_load_commands(const MachOContext *ctx,
                 break;
             }
 
+            case LC_DYSYMTAB: {
+                if (cmdsize >= sizeof(MachODysymtabCommand)) {
+                    MachODysymtabCommand dysymtab;
+                    if (safe_read_bytes(ctx->data, ctx->size, offset, &dysymtab, sizeof(dysymtab))) {
+                        info->dysymtab_ilocalsym      = macho_swap32(ctx, dysymtab.ilocalsym);
+                        info->dysymtab_nlocalsym      = macho_swap32(ctx, dysymtab.nlocalsym);
+                        info->dysymtab_iextdefsym     = macho_swap32(ctx, dysymtab.iextdefsym);
+                        info->dysymtab_nextdefsym     = macho_swap32(ctx, dysymtab.nextdefsym);
+                        info->dysymtab_iundefsym      = macho_swap32(ctx, dysymtab.iundefsym);
+                        info->dysymtab_nundefsym      = macho_swap32(ctx, dysymtab.nundefsym);
+                        info->dysymtab_indirectsymoff  = macho_swap32(ctx, dysymtab.indirectsymoff);
+                        info->dysymtab_nindirectsyms   = macho_swap32(ctx, dysymtab.nindirectsyms);
+                        info->has_dysymtab = true;
+                    }
+                }
+                break;
+            }
+
             case LC_CODE_SIGNATURE: {
                 if (cmdsize >= sizeof(MachOLinkeditDataCommand)) {
                     MachOLinkeditDataCommand cs;

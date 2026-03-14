@@ -66,6 +66,17 @@ typedef struct {
     uint32_t symtab_strsize;
     bool has_symtab;
 
+    /* Dynamic symbol table (LC_DYSYMTAB) */
+    uint32_t dysymtab_ilocalsym;
+    uint32_t dysymtab_nlocalsym;
+    uint32_t dysymtab_iextdefsym;
+    uint32_t dysymtab_nextdefsym;
+    uint32_t dysymtab_iundefsym;
+    uint32_t dysymtab_nundefsym;
+    uint32_t dysymtab_indirectsymoff;
+    uint32_t dysymtab_nindirectsyms;
+    bool has_dysymtab;
+
     /* Code signature signing status:
        0 = unknown, 1 = signed, 2 = ad-hoc signed */
     int signing_status;

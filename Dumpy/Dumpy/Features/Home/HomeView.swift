@@ -5,12 +5,12 @@ struct HomeView: View {
     @ObservedObject var openedFileState: OpenedFileState = OpenedFileState()
     @StateObject private var recentFilesStore = RecentFilesStore()
     @StateObject private var analysisService = AnalysisService()
+    @State private var navigationPath: [AnalysisNavigationDestination] = []
     @State private var showFilePicker = false
-    @State private var showAnalysis = false
     @State private var showClearAllConfirmation = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: 24) {
                     VStack(spacing: 8) {
@@ -96,11 +96,10 @@ struct HomeView: View {
             .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
-            .navigationDestination(isPresented: $showAnalysis) {
-                AnalysisContainerView(service: analysisService)
-            }
             .navigationDestination(for: AnalysisNavigationDestination.self) { destination in
                 switch destination {
+                case .analysis:
+                    AnalysisContainerView(service: analysisService)
                 case .classDetail(let cls):
                     ClassDetailView(cls: cls, allClasses: analysisService.result?.classes ?? [])
                 case .protocolDetail(let proto):
@@ -157,7 +156,7 @@ struct HomeView: View {
 
         analysisService.reset()
         analysisService.importFile(url: url)
-        showAnalysis = true
+        navigationPath = [.analysis]
     }
 
     private func isBookmarkStale(_ file: RecentFile) -> Bool {
@@ -178,7 +177,7 @@ struct HomeView: View {
 
         analysisService.reset()
         analysisService.importFile(url: url)
-        showAnalysis = true
+        navigationPath = [.analysis]
     }
 
     private func openRecentFile(_ file: RecentFile) {
@@ -193,7 +192,7 @@ struct HomeView: View {
         }
         analysisService.reset()
         analysisService.importFile(url: resolved.url)
-        showAnalysis = true
+        navigationPath = [.analysis]
     }
 }
 
