@@ -1,5 +1,56 @@
 import Foundation
 
+// MARK: - Symbol Demangling
+
+@_silgen_name("swift_demangle")
+private func _swift_demangle(
+    _ mangledName: UnsafePointer<CChar>?,
+    _ mangledNameLength: Int,
+    _ outputBuffer: UnsafeMutablePointer<CChar>?,
+    _ outputBufferSize: UnsafeMutablePointer<Int>?,
+    _ flags: UInt32
+) -> UnsafeMutablePointer<CChar>?
+
+// C++ demangling via dlsym to avoid linker dependency on libc++abi
+private let _cxa_demangle_ptr: (@convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, UnsafeMutablePointer<Int>?, UnsafeMutablePointer<Int32>?) -> UnsafeMutablePointer<CChar>?)? = {
+    guard let handle = dlopen(nil, RTLD_LAZY),
+          let sym = dlsym(handle, "__cxa_demangle") else { return nil }
+    return unsafeBitCast(sym, to: (@convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, UnsafeMutablePointer<Int>?, UnsafeMutablePointer<Int32>?) -> UnsafeMutablePointer<CChar>?).self)
+}()
+
+/// Attempt to demangle a symbol name.
+/// Returns the demangled string, or `nil` if the name is not mangled or demangling fails.
+private func demangleSymbol(_ name: String) -> String? {
+    // Swift symbols: prefixed with $s, $S, _$s, or _$S
+    if name.hasPrefix("$s") || name.hasPrefix("$S") ||
+       name.hasPrefix("_$s") || name.hasPrefix("_$S") {
+        return name.withCString { cStr in
+            guard let result = _swift_demangle(cStr, name.utf8.count, nil, nil, 0) else {
+                return nil
+            }
+            let demangled = String(cString: result)
+            free(result)
+            return demangled
+        }
+    }
+
+    // C++ symbols: prefixed with _Z or __Z
+    if name.hasPrefix("_Z") || name.hasPrefix("__Z"), let demangle = _cxa_demangle_ptr {
+        let mangledName = name.hasPrefix("__Z") ? String(name.dropFirst()) : name
+        return mangledName.withCString { cStr in
+            var status: Int32 = 0
+            guard let result = demangle(cStr, nil, nil, &status), status == 0 else {
+                return nil
+            }
+            let demangled = String(cString: result)
+            free(result)
+            return demangled
+        }
+    }
+
+    return nil
+}
+
 enum AnalysisError: Error, LocalizedError, Sendable {
     case fileAccessDenied
     case fileReadFailed
@@ -443,8 +494,10 @@ final class MachOAnalyzerBridge: Sendable {
                 let name = sym.name != nil ? String(cString: sym.name) : "<unknown>"
                 let typeName = String(cString: symbol_type_name(sym.type))
                 let isExternal = sym.visibility == SYM_VIS_EXTERNAL || sym.visibility == SYM_VIS_PRIVATE_EXTERNAL
+                let demangled = demangleSymbol(name)
                 symbols.append(SymbolModel(
                     name: name,
+                    demangledName: demangled,
                     typeDescription: typeName,
                     value: sym.value,
                     isExternal: isExternal
@@ -458,6 +511,23 @@ final class MachOAnalyzerBridge: Sendable {
         case 1:  signingStatus = "Signed"
         case 2:  signingStatus = "Ad-hoc signed"
         default: signingStatus = lcInfo.has_code_signature ? "Unsigned" : nil
+        }
+
+        // Map build tools from LC_BUILD_VERSION
+        var buildTools: [BuildToolModel] = []
+        for i in 0..<Int(lcInfo.build_tool_count) {
+            let namePtr = withUnsafePointer(to: lcInfo.build_tool_names) {
+                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: 8) { $0[i] }
+            }
+            let verPtr = withUnsafePointer(to: lcInfo.build_tool_versions) {
+                $0.withMemoryRebound(to: UnsafeMutablePointer<CChar>?.self, capacity: 8) { $0[i] }
+            }
+            if let namePtr = namePtr, let verPtr = verPtr {
+                buildTools.append(BuildToolModel(
+                    name: String(cString: namePtr),
+                    version: String(cString: verPtr)
+                ))
+            }
         }
 
         // Map header flags
@@ -491,6 +561,7 @@ final class MachOAnalyzerBridge: Sendable {
             platform: platformName,
             objcABIVersion: objcMetadata.has_image_info ? objcMetadata.objc_version : 0,
             swiftABIVersion: objcMetadata.has_image_info ? objcMetadata.swift_version : 0,
+            buildTools: buildTools,
             swiftTypes: swiftTypes,
             swiftDumpText: swiftDumpText,
             classHierarchy: hierarchy,

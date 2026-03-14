@@ -80,6 +80,11 @@ typedef struct {
     /* Code signature signing status:
        0 = unknown, 1 = signed, 2 = ad-hoc signed */
     int signing_status;
+
+    /* Build tools from LC_BUILD_VERSION (max 8) */
+    char *build_tool_names[8];     /* heap-allocated, e.g. "clang" */
+    char *build_tool_versions[8];  /* heap-allocated, e.g. "15.0.0" */
+    size_t build_tool_count;
 } LoadCommandsInfo;
 
 /// Parse all load commands from the Mach-O binary.

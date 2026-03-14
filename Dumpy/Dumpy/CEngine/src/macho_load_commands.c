@@ -215,11 +215,35 @@ DiagCode macho_parse_load_commands(const MachOContext *ctx,
                         uint32_t plat  = macho_swap32(ctx, bv.platform);
                         uint32_t minos = macho_swap32(ctx, bv.minos);
                         uint32_t sdk   = macho_swap32(ctx, bv.sdk);
+                        uint32_t ntools = macho_swap32(ctx, bv.ntools);
                         info->platform = plat;
                         free(info->min_version_string);
                         info->min_version_string = format_version(minos);
                         free(info->sdk_version_string);
                         info->sdk_version_string = format_version(sdk);
+
+                        /* Parse build tool versions */
+                        size_t tools_offset = offset + sizeof(MachOBuildVersionCommand);
+                        if (ntools > 8) ntools = 8; /* cap to fixed array size */
+                        for (uint32_t t = 0; t < ntools; t++) {
+                            MachOBuildToolVersion btv;
+                            size_t btv_off = tools_offset + (size_t)t * sizeof(MachOBuildToolVersion);
+                            if (btv_off + sizeof(MachOBuildToolVersion) > offset + cmdsize) break;
+                            if (!safe_read_bytes(ctx->data, ctx->size, btv_off, &btv, sizeof(btv))) break;
+                            uint32_t tool = macho_swap32(ctx, btv.tool);
+                            uint32_t ver  = macho_swap32(ctx, btv.version);
+                            const char *tool_name;
+                            switch (tool) {
+                                case 1:  tool_name = "clang"; break;
+                                case 2:  tool_name = "swift"; break;
+                                case 3:  tool_name = "ld";    break;
+                                case 4:  tool_name = "lld";   break;
+                                default: tool_name = "unknown"; break;
+                            }
+                            info->build_tool_names[info->build_tool_count] = strdup(tool_name);
+                            info->build_tool_versions[info->build_tool_count] = format_version(ver);
+                            info->build_tool_count++;
+                        }
                     }
                 }
                 break;
@@ -556,6 +580,14 @@ void load_commands_info_destroy(LoadCommandsInfo *info) {
     free(info->rpaths);
     info->rpaths = NULL;
     info->rpath_count = 0;
+
+    for (size_t i = 0; i < info->build_tool_count; i++) {
+        free(info->build_tool_names[i]);
+        free(info->build_tool_versions[i]);
+        info->build_tool_names[i] = NULL;
+        info->build_tool_versions[i] = NULL;
+    }
+    info->build_tool_count = 0;
 
     info->count = 0;
 }

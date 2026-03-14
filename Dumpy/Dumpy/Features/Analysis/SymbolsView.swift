@@ -28,7 +28,10 @@ struct SymbolsView: View {
         }
         if !searchText.isEmpty {
             let query = searchText.lowercased()
-            result = result.filter { $0.name.lowercased().contains(query) }
+            result = result.filter {
+                $0.name.lowercased().contains(query) ||
+                ($0.demangledName?.lowercased().contains(query) ?? false)
+            }
         }
         return result
     }
@@ -93,10 +96,17 @@ struct SymbolsView: View {
 
                     ForEach(filtered) { sym in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(sym.name)
+                            Text(sym.displayName)
                                 .font(.caption.monospaced())
                                 .lineLimit(2)
                                 .textSelection(.enabled)
+                            if sym.isDemangled {
+                                Text(sym.name)
+                                    .font(.caption2.monospaced())
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .textSelection(.enabled)
+                            }
                             HStack(spacing: 8) {
                                 Text(sym.typeDescription)
                                     .font(.caption2)

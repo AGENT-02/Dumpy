@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AnalysisTabView: View {
     let result: AnalysisResult
-    @State private var selectedTab: AnalysisTab = .overview
+    @AppStorage("selectedTab") private var selectedTab: AnalysisTab = .overview
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var debounceTask: Task<Void, Never>?

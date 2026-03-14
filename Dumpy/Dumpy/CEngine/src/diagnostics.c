@@ -98,6 +98,7 @@ static bool is_warning_code(DiagCode code) {
     switch (code) {
         case DIAG_WARN_PARTIAL_METADATA:
         case DIAG_WARN_UNRESOLVED_REFERENCE:
+        case DIAG_WARN_ALIGNMENT:
             return true;
         default:
             return false;

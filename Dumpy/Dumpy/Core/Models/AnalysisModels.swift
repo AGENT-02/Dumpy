@@ -136,9 +136,16 @@ struct CategoryModel: Identifiable, Sendable, Hashable {
 struct SymbolModel: Identifiable, Sendable, Hashable {
     let id = UUID()
     let name: String
+    let demangledName: String?
     let typeDescription: String
     let value: UInt64
     let isExternal: Bool
+
+    /// The best available display name: demangled if available, otherwise the raw name.
+    var displayName: String { demangledName ?? name }
+
+    /// Whether this symbol has a demangled form different from its raw name.
+    var isDemangled: Bool { demangledName != nil && demangledName != name }
 
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
     static func == (lhs: SymbolModel, rhs: SymbolModel) -> Bool { lhs.id == rhs.id }
@@ -192,6 +199,12 @@ struct SwiftTypeModel: Identifiable, Sendable, Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
+struct BuildToolModel: Identifiable, Sendable {
+    let id = UUID()
+    let name: String      // e.g. "clang", "swift", "ld"
+    let version: String   // e.g. "15.0.0"
+}
+
 struct AnalysisResult: Sendable {
     let fileInfo: MachOFileInfo
     let header: MachOHeaderModel
@@ -223,6 +236,9 @@ struct AnalysisResult: Sendable {
     // Image info
     let objcABIVersion: UInt32
     let swiftABIVersion: UInt32
+
+    // Build tools from LC_BUILD_VERSION
+    let buildTools: [BuildToolModel]
 
     // Swift metadata
     let swiftTypes: [SwiftTypeModel]

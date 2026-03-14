@@ -51,6 +51,14 @@ struct OverviewView: View {
                 }
             }
 
+            if !result.buildTools.isEmpty {
+                Section("Build Tools") {
+                    ForEach(result.buildTools) { tool in
+                        InfoRow(label: tool.name, value: tool.version)
+                    }
+                }
+            }
+
             if !result.headerFlags.isEmpty {
                 Section("Header Flags (\(result.headerFlags.count))") {
                     ForEach(result.headerFlags, id: \.self) { flag in
