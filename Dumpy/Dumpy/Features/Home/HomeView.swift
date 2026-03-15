@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var navigationPath: [AnalysisNavigationDestination] = []
     @State private var showFilePicker = false
     @State private var showClearAllConfirmation = false
+    @State private var importErrorMessage: String?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -93,7 +94,11 @@ struct HomeView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
+            .fileImporter(
+                isPresented: $showFilePicker,
+                allowedContentTypes: FileImportService.supportedTypes,
+                allowsMultipleSelection: false
+            ) { result in
                 handleFileImport(result)
             }
             .navigationDestination(for: AnalysisNavigationDestination.self) { destination in
@@ -126,6 +131,16 @@ struct HomeView: View {
             } message: {
                 Text("This will remove all recent file entries. This action cannot be undone.")
             }
+            .alert("Import Failed", isPresented: Binding(
+                get: { importErrorMessage != nil },
+                set: { if !$0 { importErrorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {
+                    importErrorMessage = nil
+                }
+            } message: {
+                Text(importErrorMessage ?? "Unknown import error")
+            }
             .onChange(of: openedFileState.pendingURL) { newURL in
                 guard let url = newURL else { return }
                 openedFileState.pendingURL = nil
@@ -145,18 +160,26 @@ struct HomeView: View {
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result, let url = urls.first else { return }
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else {
+                importErrorMessage = "No file was selected."
+                return
+            }
 
-        let bookmark = FileImportService.createBookmark(for: url)
-        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+            let bookmark = FileImportService.createBookmark(for: url)
+            let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
 
-        if let bookmark {
-            recentFilesStore.addOrUpdate(fileName: url.lastPathComponent, bookmarkData: bookmark, fileSize: fileSize, architectureSummary: "")
+            if let bookmark {
+                recentFilesStore.addOrUpdate(fileName: url.lastPathComponent, bookmarkData: bookmark, fileSize: fileSize, architectureSummary: "")
+            }
+
+            analysisService.reset()
+            analysisService.importFile(url: url)
+            navigationPath = [.analysis]
+        case .failure(let error):
+            importErrorMessage = error.localizedDescription
         }
-
-        analysisService.reset()
-        analysisService.importFile(url: url)
-        navigationPath = [.analysis]
     }
 
     private func isBookmarkStale(_ file: RecentFile) -> Bool {
