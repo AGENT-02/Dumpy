@@ -1,0 +1,46 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode.app
+
+      - name: Install dependencies
+        run: |
+          if [ -f "Podfile" ]; then
+            pod install
+          fi
+
+      - name: Build archive
+        run: |
+          xcodebuild \
+            -workspace Dumpy.xcworkspace \
+            -scheme Dumpy \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $PWD/build/Dumpy.xcarchive \
+            archive
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/Dumpy.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $PWD/build
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dumpy-ipa
+          path: build/*.ipa
