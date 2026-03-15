@@ -1,4 +1,4 @@
-name: Build IPA
+name: Build Enterprise IPA
 
 on:
   workflow_dispatch:
@@ -10,37 +10,84 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repo
+      # 1. Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode.app
+      # 2. Show Xcode version
+      - name: Show Xcode version
+        run: xcodebuild -version
 
-      - name: Install dependencies
+      # 3. Install enterprise certificate
+      - name: Install certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
         run: |
-          if [ -f "Podfile" ]; then
-            pod install
-          fi
+          CERT_PATH=$RUNNER_TEMP/cert.p12
+          echo "$CERTIFICATE_BASE64" | base64 --decode > $CERT_PATH
 
-      - name: Build archive
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          security create-keychain -p actions $KEYCHAIN
+          security default-keychain -s $KEYCHAIN
+          security unlock-keychain -p actions $KEYCHAIN
+          security import $CERT_PATH -k $KEYCHAIN -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions $KEYCHAIN
+
+      # 4. Install In-House provisioning profile
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE }}
+        run: |
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$PROFILE_BASE64" | base64 --decode > $PP_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # 5. Archive app
+      - name: Archive app
         run: |
           xcodebuild \
-            -workspace Dumpy.xcworkspace \
+            -project Dumpy/Dumpy.xcodeproj \
             -scheme Dumpy \
-            -sdk iphoneos \
             -configuration Release \
+            -sdk iphoneos \
             -archivePath $PWD/build/Dumpy.xcarchive \
             archive
 
+      # 6. Create ExportOptions.plist for Enterprise signing
+      - name: Create ExportOptions.plist
+        run: |
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>enterprise</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+
+      # 7. Export IPA
       - name: Export IPA
         run: |
-          xcodebuild -exportArchive \
+          xcodebuild \
+            -exportArchive \
             -archivePath $PWD/build/Dumpy.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath $PWD/build
 
+      # 8. Upload IPA as artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Dumpy-ipa
+          name: Dumpy-Enterprise-IPA
           path: build/*.ipa
